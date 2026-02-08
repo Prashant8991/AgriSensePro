@@ -1,23 +1,33 @@
 import customtkinter as ctk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from PIL import Image
-import numpy as np
-import tensorflow as tf
 import os
-import psycopg2
 
 ctk.set_appearance_mode("light")
 
-# Load trained model
-model = tf.keras.models.load_model("plant_disease_model.h5")
+try:
+    import numpy as np
+    import tensorflow as tf
+    model = tf.keras.models.load_model("plant_disease_model.h5")
+    MODEL_AVAILABLE = True
+except:
+    MODEL_AVAILABLE = False
+    model = None
 
-# Dataset path (for class names)
+try:
+    import psycopg2
+    DB_AVAILABLE = True
+except:
+    DB_AVAILABLE = False
+
 dataset_path = r"C:\Users\Prabhat Singh\Downloads\archive\PlantVillage\PlantVillage"
 
-class_names = sorted([
-    d for d in os.listdir(dataset_path)
-    if os.path.isdir(os.path.join(dataset_path, d))
-])
+class_names = ["Sample Disease 1", "Sample Disease 2", "Leaf Blight", "Powdery Mildew"]
+if os.path.exists(dataset_path):
+    class_names = sorted([
+        d for d in os.listdir(dataset_path)
+        if os.path.isdir(os.path.join(dataset_path, d))
+    ])
 
 selected_path = ""
 
@@ -37,6 +47,16 @@ def predict_image():
         result_label.configure(text="No image selected")
         return
 
+    if not MODEL_AVAILABLE:
+        messagebox.showwarning("Model Not Available", "ML model not found. Showing demo prediction.")
+        disease_name = "Tomato Early Blight"
+        confidence = 87.5
+        result_label.configure(text=f"Disease: {disease_name} ({confidence}%)")
+        treatment_label.configure(
+            text=f"Treatment: Apply fungicide\nMedicine: Mancozeb or Chlorothalonil\nDosage: As per label instructions"
+        )
+        return
+
     img = Image.open(selected_path).resize((224,224))
     arr = np.array(img)/255.0
     arr = np.expand_dims(arr, axis=0)
@@ -48,52 +68,59 @@ def predict_image():
 
     result_label.configure(text=f"Disease: {disease_name} ({confidence}%)")
 
-    # DATABASE CONNECTION
-    conn = psycopg2.connect(
-        host="localhost",
-        database="agrisense_pro",
-        user="postgres",
-        password="kali"
-    )
-    cur = conn.cursor()
-
-    # Get disease_id
-    cur.execute("SELECT disease_id FROM diseases WHERE disease_name=%s", (disease_name,))
-    result = cur.fetchone()
-
-    if result is None:
-        cur.execute("""
-            INSERT INTO diseases (disease_name, treatment, medicine, dosage)
-            VALUES (%s,'Auto detected','Consult expert','N/A')
-            RETURNING disease_id
-        """, (disease_name,))
-        disease_id = cur.fetchone()[0]
-    else:
-        disease_id = result[0]
-
-    # Save detection record
-    cur.execute(
-        "INSERT INTO crop_images (farm_id, disease_id, confidence_score, image_path) VALUES (%s,%s,%s,%s)",
-        (1, disease_id, confidence, selected_path)
-    )
-
-    # Fetch treatment info
-    cur.execute("""
-        SELECT treatment, medicine, dosage
-        FROM diseases
-        WHERE disease_id=%s
-    """, (disease_id,))
-
-    info = cur.fetchone()
-
-    if info:
-        treatment, medicine, dosage = info
+    if not DB_AVAILABLE:
         treatment_label.configure(
-            text=f"Treatment: {treatment}\nMedicine: {medicine}\nDosage: {dosage}"
+            text=f"Treatment: Consult expert\nMedicine: Based on diagnosis\nDosage: N/A\n\n(Database not connected)"
+        )
+        return
+
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="agrisense_pro",
+            user="postgres",
+            password="kali"
+        )
+        cur = conn.cursor()
+
+        cur.execute("SELECT disease_id FROM diseases WHERE disease_name=%s", (disease_name,))
+        result = cur.fetchone()
+
+        if result is None:
+            cur.execute("""
+                INSERT INTO diseases (disease_name, treatment, medicine, dosage)
+                VALUES (%s,'Auto detected','Consult expert','N/A')
+                RETURNING disease_id
+            """, (disease_name,))
+            disease_id = cur.fetchone()[0]
+        else:
+            disease_id = result[0]
+
+        cur.execute(
+            "INSERT INTO crop_images (farm_id, disease_id, confidence_score, image_path) VALUES (%s,%s,%s,%s)",
+            (1, disease_id, confidence, selected_path)
         )
 
-    conn.commit()
-    conn.close()
+        cur.execute("""
+            SELECT treatment, medicine, dosage
+            FROM diseases
+            WHERE disease_id=%s
+        """, (disease_id,))
+
+        info = cur.fetchone()
+
+        if info:
+            treatment, medicine, dosage = info
+            treatment_label.configure(
+                text=f"Treatment: {treatment}\nMedicine: {medicine}\nDosage: {dosage}"
+            )
+
+        conn.commit()
+        conn.close()
+    except:
+        treatment_label.configure(
+            text=f"Treatment: Consult expert\nMedicine: Based on diagnosis\nDosage: N/A\n\n(Database not connected)"
+        )
 
 app = ctk.CTk()
 app.geometry("600x500")

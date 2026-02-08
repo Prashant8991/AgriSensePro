@@ -1,23 +1,26 @@
 import customtkinter as ctk
 import subprocess
+import sys
+import os
+from tkinter import messagebox
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 def open_farmer():
-    subprocess.Popen(["python", "farmer_register.py"])
+    subprocess.Popen([sys.executable, "farmer_register.py"], cwd=os.path.dirname(os.path.abspath(__file__)))
 
 def open_farm():
-    subprocess.Popen(["python", "farm_register.py"])
+    subprocess.Popen([sys.executable, "farm_register.py"], cwd=os.path.dirname(os.path.abspath(__file__)))
 
 def open_detection():
-    subprocess.Popen(["python", "ml_disease_predict.py"])
+    subprocess.Popen([sys.executable, "ml_disease_predict.py"], cwd=os.path.dirname(os.path.abspath(__file__)))
 
 def open_report():
-    subprocess.Popen(["python", "view_report.py"])
+    messagebox.showinfo("Info", "Report module not yet implemented")
 
 def open_dashboard():
-    subprocess.Popen(["python", "dashboard.py"])
+    subprocess.Popen([sys.executable, "dashboard.py"], cwd=os.path.dirname(os.path.abspath(__file__)))
 
 app = ctk.CTk()
 app.geometry("900x600")

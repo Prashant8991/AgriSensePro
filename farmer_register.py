@@ -36,16 +36,20 @@ def save_farmer():
         phone_entry.delete(0,'end')
 
     except Exception as e:
-        messagebox.showerror("Database Error", str(e))
+        messagebox.showwarning("Database Unavailable", f"Database not connected. Data shown in UI only.\n\nFarmer: {name_entry.get()}\nAadhaar: {aadhaar_entry.get()}\nVillage: {village_entry.get()}\nPhone: {phone_entry.get()}")
 
 app = ctk.CTk()
 app.geometry("1100x650")
 app.title("AgriSense Pro")
 
 # Background Image
-bg_image = ctk.CTkImage(Image.open("farm_bg.jpg"), size=(1100,650))
-bg_label = ctk.CTkLabel(app, image=bg_image, text="")
-bg_label.place(x=0, y=0)
+try:
+    bg_image = ctk.CTkImage(Image.open("farm_bg.jpg"), size=(1100,650))
+    bg_label = ctk.CTkLabel(app, image=bg_image, text="")
+    bg_label.place(x=0, y=0)
+except:
+    bg_label = ctk.CTkLabel(app, text="", fg_color="#E8F5E9")
+    bg_label.place(x=0, y=0, relwidth=1, relheight=1)
 
 # Sidebar
 sidebar = ctk.CTkFrame(app, width=220, fg_color="#1B5E20")

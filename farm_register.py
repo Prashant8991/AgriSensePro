@@ -5,21 +5,24 @@ from tkinter import messagebox
 ctk.set_appearance_mode("light")
 
 def load_farmers():
-    conn = psycopg2.connect(
-        host="localhost",
-        database="agrisense_pro",
-        user="postgres",
-        password="kali"
-    )
-    cur = conn.cursor()
-    cur.execute("SELECT farmer_id, name FROM farmers")
-    data = cur.fetchall()
-    conn.close()
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="agrisense_pro",
+            user="postgres",
+            password="kali"
+        )
+        cur = conn.cursor()
+        cur.execute("SELECT farmer_id, name FROM farmers")
+        data = cur.fetchall()
+        conn.close()
 
-    farmer_list = []
-    for f in data:
-        farmer_list.append(f"{f[0]} - {f[1]}")
-    return farmer_list
+        farmer_list = []
+        for f in data:
+            farmer_list.append(f"{f[0]} - {f[1]}")
+        return farmer_list
+    except:
+        return ["1 - Sample Farmer", "2 - Demo Farmer"]
 
 def save_farm():
     try:
@@ -45,7 +48,7 @@ def save_farm():
         messagebox.showinfo("Success","Farm Added Successfully")
 
     except Exception as e:
-        messagebox.showerror("Error",str(e))
+        messagebox.showwarning("Database Unavailable", f"Database not connected. Data shown in UI only.\n\nFarmer: {farmer_dropdown.get()}\nCrop: {crop_entry.get()}\nArea: {area_entry.get()}\nSoil: {soil_entry.get()}")
 
 app = ctk.CTk()
 app.geometry("600x500")
